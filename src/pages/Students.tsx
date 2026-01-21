@@ -19,10 +19,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, UserPlus } from "lucide-react";
 
 export default function Students() {
   const [open, setOpen] = useState(false);
+  const [credentialsOpen, setCredentialsOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; email: string; name: string } | null>(null);
+  const [credentialsForm, setCredentialsForm] = useState({ password: "" });
   const [formData, setFormData] = useState({
     roll_number: "",
     name: "",
@@ -105,9 +108,69 @@ export default function Students() {
     },
   });
 
+  const createCredentialsMutation = useMutation({
+    mutationFn: async ({ studentId, email, password }: { studentId: string; email: string; password: string }) => {
+      // Create auth user with admin privileges
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+      
+      if (signUpError) throw signUpError;
+      if (!authData.user) throw new Error("Failed to create user");
+
+      // Link student to auth user
+      const { error: updateError } = await supabase
+        .from("students")
+        .update({ user_id: authData.user.id })
+        .eq("id", studentId);
+      
+      if (updateError) throw updateError;
+
+      // Add student role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: authData.user.id, role: "student" });
+      
+      if (roleError) throw roleError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      setCredentialsOpen(false);
+      setCredentialsForm({ password: "" });
+      setSelectedStudent(null);
+      toast({ title: "Login credentials created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error creating credentials", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addMutation.mutate(formData);
+  };
+
+  const handleCreateCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudent) return;
+    createCredentialsMutation.mutate({
+      studentId: selectedStudent.id,
+      email: selectedStudent.email,
+      password: credentialsForm.password,
+    });
+  };
+
+  const openCredentialsDialog = (student: { id: string; email: string; name: string; user_id: string | null }) => {
+    if (student.user_id) {
+      toast({ title: "Credentials already exist", description: "This student already has login credentials." });
+      return;
+    }
+    setSelectedStudent({ id: student.id, email: student.email, name: student.name });
+    setCredentialsOpen(true);
   };
 
   return (
@@ -214,6 +277,40 @@ export default function Students() {
         </Dialog>
       </div>
 
+      {/* Credentials Dialog */}
+      <Dialog open={credentialsOpen} onOpenChange={setCredentialsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Login Credentials</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateCredentials} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Student</Label>
+              <p className="text-sm text-muted-foreground">{selectedStudent?.name}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Email (Login)</Label>
+              <p className="text-sm font-medium">{selectedStudent?.email}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password (min 6 characters)"
+                value={credentialsForm.password}
+                onChange={(e) => setCredentialsForm({ password: e.target.value })}
+                minLength={6}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={createCredentialsMutation.isPending}>
+              {createCredentialsMutation.isPending ? "Creating..." : "Create Credentials"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <div className="rounded-lg border bg-card">
         <table className="data-table">
           <thead>
@@ -224,19 +321,20 @@ export default function Students() {
               <th>Phone</th>
               <th>Year</th>
               <th>Department</th>
+              <th>Login</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                <td colSpan={8} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </td>
               </tr>
             ) : students?.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                <td colSpan={8} className="text-center py-8 text-muted-foreground">
                   No students found. Add your first student!
                 </td>
               </tr>
@@ -249,6 +347,22 @@ export default function Students() {
                   <td>{student.phone || "-"}</td>
                   <td>{student.year}</td>
                   <td>{student.departments?.name || "-"}</td>
+                  <td>
+                    {student.user_id ? (
+                      <span className="inline-flex rounded-full bg-success/10 px-2 py-1 text-xs font-medium text-success">
+                        Active
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCredentialsDialog(student)}
+                      >
+                        <UserPlus className="mr-1 h-3 w-3" />
+                        Create
+                      </Button>
+                    )}
+                  </td>
                   <td>
                     <Button
                       variant="ghost"

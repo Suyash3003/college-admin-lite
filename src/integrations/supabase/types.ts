@@ -70,6 +70,50 @@ export type Database = {
         }
         Relationships: []
       }
+      fees: {
+        Row: {
+          academic_year: string
+          created_at: string
+          fees_due: number | null
+          fees_paid: number
+          id: string
+          semester: number
+          student_id: string
+          total_fees: number
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          created_at?: string
+          fees_due?: number | null
+          fees_paid?: number
+          id?: string
+          semester?: number
+          student_id: string
+          total_fees?: number
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          fees_due?: number | null
+          fees_paid?: number
+          id?: string
+          semester?: number
+          student_id?: string
+          total_fees?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fees_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marks: {
         Row: {
           course_id: string
