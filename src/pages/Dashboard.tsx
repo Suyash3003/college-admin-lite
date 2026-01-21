@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Building2, BookOpen, FileSpreadsheet } from "lucide-react";
+import { Users, Building2, BookOpen, FileSpreadsheet, CreditCard } from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -67,16 +67,26 @@ export default function Dashboard() {
     },
   });
 
+  const { data: feesCount } = useQuery({
+    queryKey: ["fees-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("fees")
+        .select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-description">
-          Overview of the Student Management System
+          TIET Student Management System Overview
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Total Students"
           value={studentsCount ?? 0}
@@ -101,24 +111,30 @@ export default function Dashboard() {
           icon={<FileSpreadsheet className="h-6 w-6 text-primary" />}
           description="Grade entries"
         />
+        <StatCard
+          title="Fees Records"
+          value={feesCount ?? 0}
+          icon={<CreditCard className="h-6 w-6 text-primary" />}
+          description="Fee entries"
+        />
       </div>
 
       <div className="mt-8 rounded-lg border bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground">
-          Welcome to Student Management System
+          Welcome to TIET Student Management System
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          This is a simple database management system for managing students, departments, 
-          courses, and marks. Use the sidebar to navigate between different sections.
+          This is a database management system for managing students, departments, 
+          courses, marks, and fees. Use the sidebar to navigate between different sections.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg bg-muted/50 p-4">
-            <h3 className="font-medium text-foreground">Quick Actions</h3>
+            <h3 className="font-medium text-foreground">Admin Actions</h3>
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               <li>• Add new students with department assignment</li>
-              <li>• Create and manage departments</li>
-              <li>• Add courses linked to departments</li>
-              <li>• Record marks for students</li>
+              <li>• Create login credentials for students</li>
+              <li>• Manage marks and fees records</li>
+              <li>• Add departments and courses</li>
             </ul>
           </div>
           <div className="rounded-lg bg-muted/50 p-4">
@@ -127,7 +143,7 @@ export default function Dashboard() {
               <li>• Students belong to Departments</li>
               <li>• Courses belong to Departments</li>
               <li>• Marks link Students to Courses</li>
-              <li>• Foreign key constraints enforced</li>
+              <li>• Fees linked to Students</li>
             </ul>
           </div>
         </div>

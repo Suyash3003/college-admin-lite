@@ -5,19 +5,28 @@ import {
   Building2, 
   BookOpen, 
   FileSpreadsheet,
-  GraduationCap
+  GraduationCap,
+  CreditCard,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
-const navigation = [
+const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Students", href: "/students", icon: Users },
   { name: "Departments", href: "/departments", icon: Building2 },
   { name: "Courses", href: "/courses", icon: BookOpen },
   { name: "Marks", href: "/marks", icon: FileSpreadsheet },
+  { name: "Fees", href: "/fees", icon: CreditCard },
 ];
 
 export function Sidebar() {
+  const { role, signOut, user } = useAuth();
+
+  const navigation = role === "admin" ? adminNavigation : [];
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar">
       <div className="flex h-full flex-col">
@@ -25,7 +34,7 @@ export function Sidebar() {
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
           <GraduationCap className="h-8 w-8 text-sidebar-primary" />
           <span className="text-lg font-bold text-sidebar-foreground">
-            SMS
+            TIET SMS
           </span>
         </div>
 
@@ -50,13 +59,31 @@ export function Sidebar() {
           ))}
         </nav>
 
+        {/* User Info & Logout */}
+        <div className="border-t border-sidebar-border px-4 py-4">
+          {user && (
+            <div className="mb-3">
+              <p className="truncate text-sm text-sidebar-foreground">{user.email}</p>
+              <p className="text-xs capitalize text-sidebar-foreground/50">{role}</p>
+            </div>
+          )}
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            onClick={signOut}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
+
         {/* Footer */}
         <div className="border-t border-sidebar-border px-6 py-4">
           <p className="text-xs text-sidebar-foreground/50">
             Student Management System
           </p>
           <p className="text-xs text-sidebar-foreground/50">
-            College Database Project
+            Thapar Institute
           </p>
         </div>
       </div>
